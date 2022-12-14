@@ -8,80 +8,25 @@ import {useUiStore} from "../stores/ui";
 
 const authStore = useAuthStore();
 const uiStore = useUiStore();
-const {executeMoveCall, getAddress, getSuitableCoinId, getHistory} = useWallet();
+const {executeMoveCall, getAddress, getSuitableCoinId} = useWallet();
 
-const gameStatuses = {
-  STANDBY: 'STANDBY',
-  LOSS: 'LOSS',
-  WIN: 'WIN'
-}
-const spinningList = ["❌", "🦄", "✅", "🐻️", "🤑"];
-const gameStatus = ref(gameStatuses.STANDBY);
-const gameStarted = ref(false);
 const isLoading = ref(false);
-const gameResultsObject = ref({});
-const gameResults = ref([]);
-const totalGames = ref(0);
-const wheelSlots = reactive([
-  {
-    id: 0,
-    started: false,
-    randomSlides: [],
-    ended: false
-  },
-  {
-    id: 1,
-    randomSlides: [],
-    started: false,
-    ended: false
-  },
-  {
-    id: 2,
-    randomSlides: [],
-    started: false,
-    ended: false
-  }
-]);
-
-const amount = reactive({
-  value: 10000000
-})
-
-const player_choice = reactive({
-  value: 1
-})
-
-const coin_state = reactive({
-  value: 2
-})
-
-const history = reactive({
-  value: []  
-})
-
-
-
+const isTicketRemain = ref(0);
 
 let initialSpinInterval = ref();
 
 onMounted(()=>{
   initialSpinInterval.value = setupSpinningInterval(120);
-  getHistory().then((data) => {
-    history.value = data;
-  });
 });
-
 
 
 const executeGamble = () => {
   const address = getAddress();
   if(!address) return;
-  if(gameStarted.value) return;
   resetGame();
-  gameStarted.value = true;
   isLoading.value = true;
 
-  const coinId = getSuitableCoinId(100);
+  const coinId = getSuitableCoinId(10);
   console.log(coinId);
 
   console.log(authStore.ticketnum);
@@ -101,30 +46,23 @@ const executeGamble = () => {
     gasBudget: 1000
   })
   .then(res =>{
-    totalGames.value++;
     const status = res?.effects?.status?.status;
 
     console.log(res);
 
-    if(status === 'success'){
-      let SuizinoEventResult = res?.effects?.events?.find(x => x.moveEvent) || {};
-
-      let fields = SuizinoEventResult?.moveEvent?.fields;
-
-      gameResultsObject.value = "success";
-      gameResults.value = [fields.winner_index];
-
-      // We just mark all slots as "started" and we let the interval that is already running
-      // take care of showing the results. To make it more smooth,
-      for(let [index, slot] of wheelSlots.entries()){
-        slot.started = true;
-        // setTimeout(()=>{
-        //
-        // }, (index+1) * 600); // start wih 300ms difference
-      }
-
+    if(status === 'success'){      
+        uiStore.setNotification("You bought", "success")
     }else{
-      uiStore.setNotification(res?.effects?.status?.error);
+      let e = res?.effects?.status?.error;
+      
+      if(e.includes('2)'))
+      {
+        uiStore.setNotification("No Tickets");
+        isTicketRemain.value = 1;
+      }
+      else
+        uiStore.setNotification(e);
+          
       resetGame();
     }
   }).catch(e=>{
@@ -132,28 +70,13 @@ const executeGamble = () => {
 
     uiStore.setNotification(e.message);
   });
-  };
-  
+  }  
 }
 
 
 const setupSpinningInterval = (timeout) => {
   return setInterval(()=> {
-    for (let slot of wheelSlots) {
-
-      if(slot.ended) continue; // if slot selection ended. continue!
-
-      // if slot slection has started, we pick one and then break
-      if(slot.started){
-        clearSpinningInterval();
-        slot.randomSlides = [spinningList[gameResults.value[slot.id]]];
-        slot.ended = true;
-
-        if(slot.id === wheelSlots.length - 1) checkGameStatus();
-        continue;
-      }
-      slot.randomSlides = [...spinningList].sort(() => 0.5 - Math.random()).slice(0,3);
-    }
+    
   }, timeout);
 }
 
@@ -166,49 +89,9 @@ onUnmounted(()=>{
 });
 
 const resetGame = () => {
-  
   clearSpinningInterval();
-  for(let slot of wheelSlots){
-    slot.randomSlides = [];
-    slot.started = false;
-    slot.ended = false;
-  }
   isLoading.value = false;
-  gameStarted.value = false;
-  gameResults.value = null;
-  gameStatus.value = gameStatuses.STANDBY;
-  gameResultsObject.value = {};
-  coin_state.value = 2;
   setupSpinningInterval(120);
-}
-const startGame = () => {
-}
-
-const checkGameStatus = () =>{
-  gameStarted.value = false;
-  isLoading.value = false;
-  let hasWon = true;
-  let icon = null;
-  gameStatus.value = gameResultsObject.value == "success" ? gameStatuses.WIN : gameStatuses.LOSS;
-  
-
-  if(gameStatus.value === gameStatuses.WIN){
-    uiStore.setNotification("You bought", "success")
-  }
-  if(gameStatus.value === gameStatuses.LOSS){
-    uiStore.setNotification("Failure")
-  }
-  for(let slot of wheelSlots){
-    if(!icon) {
-      icon = slot.randomSlides[0];
-      continue;
-    }
-
-    if(icon !== slot.randomSlides[0]){
-      hasWon = false;
-      break;
-    }
-  }
 }
 
 </script>
