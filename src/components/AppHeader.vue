@@ -2,10 +2,10 @@
 import {onMounted, onUnmounted, watch} from "vue";
 import {useWallet} from "../helpers/wallet";
 import {useUiStore} from "../stores/ui";
-import {moduleAddress, moduleName, casinoAddress} from "../helpers/constants";
+import {moduleAddress, moduleName, casinoAddress, gameAddress} from "../helpers/constants";
 const {
   walletProviders,
-  isPermissionGranted, logout, permissionGrantedError,verifyWalletPermissions, getSuitableCoinId, requestWalletAccess, executeMoveCall, getAddress } = useWallet();
+  isPermissionGranted, logout, permissionGrantedError,verifyWalletPermissions, requestWalletAccess, executeMoveCall, getAddress, getSuitableCoinId } = useWallet();
 import { useDark, useToggle } from '@vueuse/core';
 import {useAuthStore} from "../stores/auth";
 import Modal from "./Modal.vue";
@@ -43,37 +43,6 @@ const disconnect = () => {
 onMounted(()=>{
 
 })
-// deposits to casino
-const depositToCasino = async () => {
-
-  if(!authStore.casinoAdmin.isAdmin) return; // only admins can deposit to casino.
-  const address = getAddress();
-  if(!address) return;
-
-  const amount = 5000000000;
-  const coinId = getSuitableCoinId(amount);
-  console.log(coinId);
-
-  return executeMoveCall({
-        packageObjectId: moduleAddress,
-        module: moduleName,
-        typeArguments: [],
-        arguments: [authStore.casinoAdmin.objectAddress, casinoAddress,amount, coinId],
-        function: 'depositToCoinFlip',
-        gasBudget: 1000
-  }).then(res=>{
-    const status = res?.effects?.status?.status;
-
-    if(status === 'success'){
-      uiStore.setNotification( amount + " successfully deposited to casino", "success");
-    }else{
-      uiStore.setNotification(res?.effects?.status?.error);
-    }
-    
-  }).catch(e=>{
-    uiStore.setNotification(e.message);
-  })
-}
 
 const withdraw = async () => {
 
@@ -81,22 +50,47 @@ if(!authStore.casinoAdmin.isAdmin) return; // only admins can deposit to casino.
 const address = getAddress();
 if(!address) return;
 
-const amount = 2000000000;
-const coinId = getSuitableCoinId(0);
-console.log(coinId);
-
 return executeMoveCall({
       packageObjectId: moduleAddress,
       module: moduleName,
       typeArguments: [],
-      arguments: [authStore.casinoAdmin.objectAddress, casinoAddress, amount, coinId],
-      function: 'withdraw',
+      arguments: [authStore.casinoAdmin.objectAddress, casinoAddress, gameAddress],
+      function: 'draw',
       gasBudget: 1000
 }).then(res=>{
   const status = res?.effects?.status?.status;
 
     if(status === 'success'){
-      uiStore.setNotification( amount + " successfully withdraw from casino", "success");
+      uiStore.setNotification("successfully withdraw", "success");
+    }else{
+      uiStore.setNotification(res?.effects?.status?.error);
+    }
+  
+}).catch(e=>{
+  uiStore.setNotification(e.message);
+})
+}
+
+const reward = async () => {
+
+const address = getAddress();
+if(!address) return;
+
+const coinId = getSuitableCoinId(0);
+
+return executeMoveCall({
+      packageObjectId: moduleAddress,
+      module: moduleName,
+      typeArguments: [],
+      arguments: [casinoAddress, coinId],
+      function: 'take_reward',
+      gasBudget: 1000
+}).then(res=>{
+  const status = res?.effects?.status?.status;
+
+    if(status === 'success'){
+      uiStore.setNotification("successfully reward", "success");
+      authStore.winner = 0;
     }else{
       uiStore.setNotification(res?.effects?.status?.error);
     }
@@ -135,9 +129,9 @@ return executeMoveCall({
           </button>
 
           <button v-if="authStore.casinoAdmin.isAdmin" class="bg-gray-800 dark:bg-gray-800 flex items-center text-white px-5 py-2 mr-2 rounded-full"
-                  @click="depositToCasino">Deposit to Casino</button>
-          <button v-if="authStore.casinoAdmin.isAdmin" class="bg-gray-800 dark:bg-gray-800 flex items-center text-white px-5 py-2 mr-2 rounded-full"
                   @click="withdraw">Withdraw</button>
+          <button v-if="authStore.winner != 0" class="bg-gray-800 dark:bg-gray-800 flex items-center text-white px-5 py-2 mr-2 rounded-full"
+                  @click="reward">Reward</button>
 
           <button v-if="!authStore.hasWalletPermission"
                   class="bg-gray-800 dark:bg-gray-800 flex items-center text-white px-5 py-2 rounded-full"

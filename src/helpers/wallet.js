@@ -27,6 +27,7 @@ export function useWallet() {
     const authStore = useAuthStore();
     const uiStore = useUiStore();
     const permissionGrantedError = ref("");
+    const winner_index = ref(0);
 
     const updateSuiAddress = (address, provider) => {
         if(address){
@@ -84,13 +85,19 @@ export function useWallet() {
         if(!address) return;
 
         provider.getObjectsOwnedByAddress(address).then(res =>{
-            // let casinoOwnership = res.find(x => x.type.includes('CoinFlipOwnership'));
-            // if(casinoOwnership){
-            //     authStore.casinoAdmin.isAdmin = true;
-            //     authStore.casinoAdmin.objectAddress = casinoOwnership.objectId;
-            // }
+            let casinoOwnership = res.find(x => x.type.includes('RaffleOwnership'));
+            if(casinoOwnership){
+                authStore.casinoAdmin.isAdmin = true;
+                authStore.casinoAdmin.objectAddress = casinoOwnership.objectId;
+            }
 
-            getTicketNum();
+            provider.getObject(casinoAddress).then(res =>{
+                if(res.status == 'Exists')
+                {
+                    let a = res.details.data.fields.winner;
+                    winner_index.value = a;
+                }
+            });
 
             let coinAddresses = res.filter(x => x.type.includes('Coin'));
 
@@ -129,47 +136,14 @@ export function useWallet() {
         authStore.$reset();
     }
 
-    const getHistory = async () => {
+    const getWinner = () => {
         
-        let history_result = await provider.getTransactions({
-            "InputObject": casinoAddress
-            },null,10, true).then(res =>{
-
-            let i = 0;
-            let history_array = [];
-            for(i = 0; i < res.data.length; i ++)
+        provider.getObject(casinoAddress).then(res =>{
+            if(res.status == 'Exists')
             {
-                let temp = provider.getTransactionWithEffects(res.data.at(i)).then(res =>{
-                    if(res.certificate.data.transactions.at(0).Call.function.includes('gamble') && res.effects.status.status.includes('success'))
-                    {
-                        
-                        let a = res.effects.events.at(res.effects.events.length - 1);
-                        // console.log(a);
-                        let d = new Date(res.timestamp_ms);
-                        let dn = d.toLocaleString();
-                        let s = a.moveEvent.fields.gambler;
-                        
-                        return {
-                            sender:     s.slice(0,5) + '...' + s.slice(-4),
-                            cost:       res.certificate.data.transactions.at(0).Call.arguments.at(2)/1000000000,
-                            winning:    a.moveEvent.fields.winnings > 0? 1 : 0,
-                            time:       dn
-                        }
-                        
-                    }
-                    else return null;
-                });
-                
-                temp.then((data) => {
-                    if (data) history_array.push(data);
-                });
-
+                authStore.winner = res.details.data.fields.ticket_count;
             }
-            
-            return history_array;
         });
-        
-        return history_result;
     }
 
     // prompt to request access to the wallet.
@@ -215,5 +189,5 @@ export function useWallet() {
         return window[authStore.walletProvider].executeMoveCall(params);
     }
 
-    return {provider, walletProviders,verifyWalletPermissions, requestWalletAccess,getAddress,logout,executeMoveCall,getSuitableCoinId,getHistory,isPermissionGranted, permissionGrantedError}
+    return {provider, walletProviders,verifyWalletPermissions, requestWalletAccess,getAddress,logout,executeMoveCall,getSuitableCoinId,getWinner,isPermissionGranted, permissionGrantedError, winner_index}
 }

@@ -8,7 +8,7 @@ import {useUiStore} from "../stores/ui";
 
 const authStore = useAuthStore();
 const uiStore = useUiStore();
-const {executeMoveCall, getAddress, getSuitableCoinId} = useWallet();
+const {executeMoveCall, getAddress, getSuitableCoinId, getWinner} = useWallet();
 
 const isLoading = ref(false);
 const isTicketRemain = ref(0);
@@ -76,7 +76,11 @@ const executeGamble = () => {
 
 const setupSpinningInterval = (timeout) => {
   return setInterval(()=> {
-    
+    getWinner();
+    if (authStore.winner != 0)
+    {
+      uiStore.setNotification("You are winner.");
+    }
   }, timeout);
 }
 
