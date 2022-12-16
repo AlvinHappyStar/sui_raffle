@@ -131,7 +131,7 @@ return executeMoveCall({
 
           <button v-if="authStore.casinoAdmin.isAdmin" class="bg-gray-800 dark:bg-gray-800 flex items-center text-white px-5 py-2 mr-2 rounded-full"
                   @click="withdraw">Withdraw</button>
-          <button v-if="authStore.isWinner" class="bg-gray-800 dark:bg-gray-800 flex items-center text-white px-5 py-2 mr-2 rounded-full"
+          <button v-if="authStore.isWinner && authStore.hasWalletPermission" class="bg-gray-800 dark:bg-gray-800 flex items-center text-white px-5 py-2 mr-2 rounded-full"
                   @click="reward">Reward</button>
 
           <button v-if="!authStore.hasWalletPermission"

@@ -14,7 +14,7 @@ export const useAuthStore = defineStore({
         },
         coins: [],
         ticketnum:0,
-        winner: 0,
+        winner: -1,
         isWinner:false,
         toggleWalletAuthModal: false
     }),

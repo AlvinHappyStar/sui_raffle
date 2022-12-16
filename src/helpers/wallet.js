@@ -94,7 +94,6 @@ export function useWallet() {
                         break;
                     }
                 }
-                console.log(authStore.isWinner);
             });
         });
     }
@@ -106,7 +105,7 @@ export function useWallet() {
         if(!address) return;
 
         provider.getObjectsOwnedByAddress(address).then(res =>{
-            let casinoOwnership = res.find(x => x.type.includes('RaffleOwnership'));
+            let casinoOwnership = res.find(x => x.type.includes('RaffleOwnership') && x.type.startsWith(moduleAddress));
             if(casinoOwnership){
                 authStore.casinoAdmin.isAdmin = true;
                 authStore.casinoAdmin.objectAddress = casinoOwnership.objectId;
@@ -147,6 +146,8 @@ export function useWallet() {
         }
         updateSuiAddress(null);
         authStore.$reset();
+        authStore.isWinner = false;
+        authStore.winner = -1;
     }
 
     const getWinner = () => {
@@ -155,7 +156,7 @@ export function useWallet() {
         provider.getObject(casinoAddress).then(res =>{
             if(res.status == 'Exists')
             {
-                authStore.winner = res.details.data.fields.winner;
+                authStore.winner = res.details.data.fields.winner - 1;
             }
         });
     }
@@ -188,7 +189,6 @@ export function useWallet() {
 
             if(coin.balance >= amount){
                 coinId = coin.id;
-                console.log(coinId);
                 break;
             }
         }

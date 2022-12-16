@@ -19,6 +19,7 @@ const isTicketRemain = ref(0);
 let initialSpinInterval = ref();
 
 onMounted(()=>{
+  getSuitableCoinId(0);
   initialSpinInterval.value = setupSpinningInterval(1200);
 });
 
@@ -30,10 +31,9 @@ const executeGamble = () => {
   isLoading.value = true;
 
   const coinId = getSuitableCoinId(100);
-  console.log(coinId);
 
   console.log(authStore.ticketnum);
-  if(authStore.ticketnum > 4)
+  if(authStore.ticketnum >= 4)
   {
     uiStore.setNotification("You don't buy ticket any more.")
     resetGame();
@@ -81,19 +81,18 @@ const setupSpinningInterval = (timeout) => {
     const address = getAddress();
     if(!address) return;
     
-    if(authStore.winner == 0)
+    if(authStore.winner >= 0)
     {
-      getWinner();
-      isWinner();
-    }      
-    else
-    {
-        if(authStore.isWinner)
+      if(authStore.isWinner)
         {
           clearSpinningInterval();  
           uiStore.setNotification("You are winner.");
         }    
-      
+    }      
+    else
+    {
+      getWinner();
+      isWinner();      
     }
     
   }, timeout);
