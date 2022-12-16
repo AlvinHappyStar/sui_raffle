@@ -27,7 +27,6 @@ export function useWallet() {
     const authStore = useAuthStore();
     const uiStore = useUiStore();
     const permissionGrantedError = ref("");
-    const winner_index = ref(0);
 
     const updateSuiAddress = (address, provider) => {
         if(address){
@@ -78,6 +77,28 @@ export function useWallet() {
         });
     }
 
+    const isWinner = async () =>{
+        const address = getAddress();
+        if(!address) return;
+
+        provider.getObjectsOwnedByAddress(address).then(res =>{
+            let tickets = res.filter(x => x.type.includes('Ticket') && x.type.startsWith(moduleAddress));
+
+            provider.getObjectBatch(tickets.map(x => x.objectId)).then(res => {
+                let i = 0;
+                for(i = 0; i < res.length; i ++)
+                {
+                    if(res.at(i).details.data.fields.part_index == authStore.winner)
+                    {
+                        authStore.isWinner = true;
+                        break;
+                    }
+                }
+                console.log(authStore.isWinner);
+            });
+        });
+    }
+
     // gets the user's object and checks if we have a casino ownership.
     // We also keep a list of SUI Coin addresses to use for transactions.
     const getUserCasinoOwnershipAndUserCoinAddresses = () => {
@@ -90,14 +111,6 @@ export function useWallet() {
                 authStore.casinoAdmin.isAdmin = true;
                 authStore.casinoAdmin.objectAddress = casinoOwnership.objectId;
             }
-
-            provider.getObject(casinoAddress).then(res =>{
-                if(res.status == 'Exists')
-                {
-                    let a = res.details.data.fields.winner;
-                    winner_index.value = a;
-                }
-            });
 
             let coinAddresses = res.filter(x => x.type.includes('Coin'));
 
@@ -137,11 +150,12 @@ export function useWallet() {
     }
 
     const getWinner = () => {
-        
+        const address = getAddress();
+        if(!address) return;
         provider.getObject(casinoAddress).then(res =>{
             if(res.status == 'Exists')
             {
-                authStore.winner = res.details.data.fields.ticket_count;
+                authStore.winner = res.details.data.fields.winner;
             }
         });
     }
@@ -169,12 +183,12 @@ export function useWallet() {
     const getSuitableCoinId = (amount) => {
 
         getTicketNum();
-        console.log(authStore.ticketnum);
         let coinId = null;
         for(let coin of authStore.coins){
-            // console.log(coin);
+
             if(coin.balance >= amount){
-                coinId = coin.id
+                coinId = coin.id;
+                console.log(coinId);
                 break;
             }
         }
@@ -189,5 +203,5 @@ export function useWallet() {
         return window[authStore.walletProvider].executeMoveCall(params);
     }
 
-    return {provider, walletProviders,verifyWalletPermissions, requestWalletAccess,getAddress,logout,executeMoveCall,getSuitableCoinId,getWinner,isPermissionGranted, permissionGrantedError, winner_index}
+    return {provider, walletProviders,verifyWalletPermissions, requestWalletAccess,getAddress,logout,executeMoveCall,getSuitableCoinId,getWinner,isPermissionGranted, permissionGrantedError, isWinner}
 }

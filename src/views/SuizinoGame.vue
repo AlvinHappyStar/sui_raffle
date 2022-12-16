@@ -8,15 +8,18 @@ import {useUiStore} from "../stores/ui";
 
 const authStore = useAuthStore();
 const uiStore = useUiStore();
-const {executeMoveCall, getAddress, getSuitableCoinId, getWinner} = useWallet();
+const {executeMoveCall, getAddress, getSuitableCoinId, getWinner, isWinner} = useWallet();
 
-const isLoading = ref(false);
+const isLoading = reactive({
+  value: false
+})
+
 const isTicketRemain = ref(0);
 
 let initialSpinInterval = ref();
 
 onMounted(()=>{
-  initialSpinInterval.value = setupSpinningInterval(120);
+  initialSpinInterval.value = setupSpinningInterval(1200);
 });
 
 
@@ -26,13 +29,13 @@ const executeGamble = () => {
   resetGame();
   isLoading.value = true;
 
-  const coinId = getSuitableCoinId(10);
+  const coinId = getSuitableCoinId(100);
   console.log(coinId);
 
   console.log(authStore.ticketnum);
-  if(authStore.ticketnum == 5)
+  if(authStore.ticketnum > 4)
   {
-    uiStore.setNotification("You don't buy ticket any more")
+    uiStore.setNotification("You don't buy ticket any more.")
     resetGame();
   }
   else
@@ -62,9 +65,8 @@ const executeGamble = () => {
       }
       else
         uiStore.setNotification(e);
-          
-      resetGame();
     }
+    resetGame();
   }).catch(e=>{
     resetGame();
 
@@ -76,11 +78,24 @@ const executeGamble = () => {
 
 const setupSpinningInterval = (timeout) => {
   return setInterval(()=> {
-    getWinner();
-    if (authStore.winner != 0)
+    const address = getAddress();
+    if(!address) return;
+    
+    if(authStore.winner == 0)
     {
-      uiStore.setNotification("You are winner.");
+      getWinner();
+      isWinner();
+    }      
+    else
+    {
+        if(authStore.isWinner)
+        {
+          clearSpinningInterval();  
+          uiStore.setNotification("You are winner.");
+        }    
+      
     }
+    
   }, timeout);
 }
 
@@ -93,9 +108,9 @@ onUnmounted(()=>{
 });
 
 const resetGame = () => {
-  clearSpinningInterval();
+  // clearSpinningInterval();
   isLoading.value = false;
-  setupSpinningInterval(120);
+  // setupSpinningInterval(1200);
 }
 
 </script>
@@ -283,10 +298,10 @@ const resetGame = () => {
         </button>
         <button v-else
                 class="bg-gray-800 mx-auto ease-in-out duration-500 hover:px-10 dark:bg-gray-800 flex items-center text-white px-5 py-2 rounded-full"
-                :class="isLoading || !authStore.hasWalletPermission ? 'opacity-70 cursor-default hover:px-5': ''"
+                :class="isLoading.value || !authStore.hasWalletPermission ? 'opacity-70 cursor-default hover:px-5': ''"
                 @click="executeGamble">
 
-          <div v-if="isLoading">
+          <div v-if="isLoading.value">
             <svg aria-hidden="true" class="w-5 h-5 text-gray-200 animate-spin dark:text-white fill-gray-800" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
                     fill="currentColor"/>
